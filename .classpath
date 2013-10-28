@@ -1,0 +1,21 @@
+<classpath>
+  <classpathentry output="target/scala-2.10/classes" path="src/main/scala" kind="src"></classpathentry>
+  <classpathentry output="target/scala-2.10/classes" path="src/main/java" kind="src"></classpathentry>
+  <classpathentry output="target/scala-2.10/test-classes" path="src/test/scala" kind="src"></classpathentry>
+  <classpathentry output="target/scala-2.10/test-classes" path="src/test/java" kind="src"></classpathentry>
+  <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"></classpathentry>
+  <classpathentry path="./lib_managed/bundles/com.typesafe.akka/akka-actor_2.10/akka-actor_2.10-2.1.0.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/bundles/com.typesafe/config/config-1.0.0.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/bundles/com.typesafe.akka/akka-remote_2.10/akka-remote_2.10-2.1.0.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/bundles/io.netty/netty/netty-3.5.8.Final.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/com.google.protobuf/protobuf-java/protobuf-java-2.4.1.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/org.uncommons.maths/uncommons-maths/uncommons-maths-1.2.2a.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/com.typesafe.akka/akka-kernel_2.10/akka-kernel_2.10-2.1.0.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/bundles/com.typesafe.akka/akka-slf4j_2.10/akka-slf4j_2.10-2.1.0.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/org.slf4j/slf4j-api/slf4j-api-1.7.2.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/ch.qos.logback/logback-classic/logback-classic-1.0.7.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/ch.qos.logback/logback-core/logback-core-1.0.7.jar" kind="lib"></classpathentry>
+  <classpathentry path="./lib_managed/jars/net.java.dev.jna/jna/jna-3.5.2.jar" kind="lib"></classpathentry>
+  <classpathentry path="org.eclipse.jdt.launching.JRE_CONTAINER" kind="con"></classpathentry>
+  <classpathentry path="bin" kind="output"></classpathentry>
+</classpath>
