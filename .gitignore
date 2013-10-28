@@ -16,4 +16,4 @@ project/plugins/project/
 *.so
 
 #testing mains
-./src/main/scala/com/tecniplast/test/*
+src/main/scala/com/tecniplast/test/*
