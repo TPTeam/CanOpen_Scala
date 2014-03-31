@@ -14,7 +14,29 @@ package object canopen {
     
   implicit def -+ (x: Byte): Int =
     if (x < 0)
-      (x.toInt.abs + 128)
+      (x & 0xFF)
     else x.toInt
+    
+  def get2DigitsHex(b: Byte): String = {
+    val s = (-+(b).toHexString).toUpperCase
+    if (s.length > 1)
+      "0x"+s
+    else
+      "0x0"+s
+  }
+  
+  def get4DigitsHex(x: Long): String = {
+    val s = (x.toHexString).toUpperCase
+    if (s.length > 3)
+      "0x"+s
+    else if (s.length == 3)
+      "0x0"+s
+    else if (s.length == 2)
+      "0x00"+s
+    else if (s.length == 1)
+      "0x000"+s
+    else
+      "0x0000"+s
+  }
 
 }

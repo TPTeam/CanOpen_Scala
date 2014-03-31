@@ -28,6 +28,7 @@ trait msgReceived extends Callback {
 }
 
 object CanLibrary {
+  //Viene caricata solo da qui...non capisco perchè...
   System.setProperty("jna.library.path","./")
   
   val library: C_Can_Bridge =

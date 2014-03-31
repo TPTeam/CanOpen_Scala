@@ -85,7 +85,9 @@ object CanOpenMessages {
   	    MSGTYPE_STANDARD)
   */
   abstract class ReceivedCanOpenMessage(function: Int,address: Int, message: Array[Byte]) {
-   
+    	def getAddress = address
+    	def getMessage = message
+    	def getFunction = function
   }
   
   /* TPDO Messages */
@@ -117,7 +119,9 @@ object CanOpenMessages {
   		extends ReceivedCanOpenMessage(RPDO4,address,message)
   		with ReceivedRPDO
   /* SDO Messagees */
-  trait ReceivedSDO {} 
+  trait ReceivedSDO {
+    self : ReceivedCanOpenMessage =>
+  } 
   case class ReceivedTSSDOCanOpenMessage(address: Int, message: Array[Byte]) 
   		extends ReceivedCanOpenMessage(TSSDO,address,message)
   		with ReceivedSDO

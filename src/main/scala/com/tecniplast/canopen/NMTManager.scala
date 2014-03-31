@@ -86,30 +86,32 @@ trait NMTManager {
 }
 
 /*
- * Try to keep everythig always alive withoput any feedback
+ * Try to keep everything always alive without any feedback
  */
 case class UnmanagedNMTManager() extends Actor with NMTManager {
   override lazy val initTime = 100 milliseconds
   
   def receive = {
+    self ! Check
     firstTimeBootUp
   } 
-  
+
   def firstTimeBootUp: PartialFunction[Any,Unit] = {
     case Check =>
     	context.parent ! SendNMTCMDCanOpenMessage(ALL_SLAVES,CMD_START)
     	context.become(restartAlways,true)
-    case any => self ! any
+    case any =>
+      println("NMTManager Received "+any)
+      self ! any
   }
   
   def restartAlways: PartialFunction[Any,Unit] = {
     case Check =>
     case ReceivedNMTHEARTBEATCanOpenMessage(addr,msg) =>
       msg.toList.headOption.map(_ & 0x7F) match {
-        case Some(STATUS_INITIALISING) => 
-          context.parent ! SendNMTCMDCanOpenMessage(addr,CMD_START)
+        case Some(STATUS_OPERATIONAL) => 
         case _ =>
-          throw new Exception("Recived uncorrect NMT Msg")
+		  context.parent ! SendNMTCMDCanOpenMessage(addr,CMD_START)
       }
     case any => println("Unmanaged message to NMTManager: "+any)
   }

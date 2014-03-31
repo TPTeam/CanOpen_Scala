@@ -4,7 +4,8 @@ package com.tecniplast.canopen
 /*
  * Stato attuale e dizionario degli oggetti
  */
-object CanOpenObjectDictionary {
+object CanOpenObjectDictionary extends CanOpenObjectDictionary{}
+trait CanOpenObjectDictionary {
   
   case class CanOpenDictionaryElement(
       index: Long, 
@@ -14,7 +15,7 @@ object CanOpenObjectDictionary {
   ) {
     
     def getIndex: Array[Byte] = 
-      Array((0x00FF & index),(0xFF00 & index))
+      Array((0x00FF & index),((0xFF00 & index) >> 8))
     def getSubIndex: Byte =
       sub_index
     
@@ -33,7 +34,7 @@ object CanOpenObjectDictionary {
 
   def apply(implicit index: Long, sub_index: Int) = { 
     (index,sub_index) match {
-      /*
+      /*address: Int
        * GENERAL
        */
       case (0x1008,0x00) =>
@@ -52,47 +53,6 @@ object CanOpenObjectDictionary {
           case 0x03 => getElement("Revision Number") 
           case 0x04 => getElement("Serial Number")
         }
-      /*
-       * SDO
-       */
-      case (0x1200,s_i) =>
-        (s_i) match {
-          case 0x03 =>
-            getElement("SDO configuration")
-      }
-      /*
-       * RPDO 0
-       */
-      case (0x1400,s_i) =>
-        (s_i) match {
-          case 0x01 =>
-            getElement("PDO1 Listening")
-       }
-       case (0x1600,s_i) =>
-        (s_i) match {
-          case 0x01 =>
-            getElement("Led RGB & Self Test")
-          case 0x02 =>
-            getElement("Command")
-       }
-       /*
-       * TPDO 0
-       */
-      case (0x1A00,s_i) =>
-        (s_i) match {
-          case 0x01 =>
-            getElement("inputs")
-          case 0x02 =>
-            getElement("commands")
-       }
-       /*
-       * TPDO 1
-       */
-      case (0x1A01,s_i) =>
-        (s_i) match {
-          case 0x01 =>
-            getElement("uuid rfid intra slave") //da mandare con rtr?
-       }
     }
   }
   

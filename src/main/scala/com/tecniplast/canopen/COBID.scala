@@ -187,14 +187,15 @@ object CanOpenMsgType {
  */
 case class COBID(address: Int, function: Int) {
   val addressLimit = 0x7F
-  val functionLimit = 
-    if (!CanOpenManager.protocolVersion)
+  val functionLimit =
+    if (true)
+    //if (!CanOpenManager.protocolVersion)
       0xF
     else
       0x3FFFF
   
   
-  assert (address <= 10)
+  assert (address <= addressLimit)
   assert (function <= functionLimit)
   
   

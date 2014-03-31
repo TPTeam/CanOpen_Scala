@@ -17,17 +17,5 @@ object CanOpenManager {
     */
   val protocolVersion = 
     config.getString("protocolVersion").equals("B")
-  
-  val manager = 
-    system.actorOf(Props(CanOpenManagerActor(config)),"can-open-manager")
     
-  
-}
-
-case class CanOpenManagerActor(config : Config) extends Actor {
-  
-  def receive = {
-    case _ => 
-  }
-  
 }

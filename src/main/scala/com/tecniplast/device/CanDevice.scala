@@ -16,7 +16,9 @@ object CanDevice {
   case class CanMsgSend(id: Long, msg: Array[Byte], flags: Int)
 }
 
-case class CanDevice(port: Int)(dispatcher_prop: Props) extends Actor with CanLibraryActorWrapper {
+case class CanDevice(port: Int)(dispatcher_prop: Props) 
+	extends Actor 
+	with CanLibraryActorWrapper {
   val portNumber = port
   //only for debugging purposes looks not working
   //setEcho(true)
@@ -135,6 +137,7 @@ trait CanLibraryActorWrapper {
       //tmp_msg.setString(0, msg.substring(0, length))
 
       (CanLibrary.library.writeMsg(portNumber,id,length,flags,tmp_msg) == 0)
+
     } catch {
       case err: Throwable =>
         err.printStackTrace

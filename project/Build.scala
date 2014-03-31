@@ -28,7 +28,7 @@ object Build extends Build {
         "-deprecation",
         "-Xlint",
         "-language:_",
-        "-target:jvm-1.6",
+        //"-target:jvm-1.6",
         "-encoding", "UTF-8"
       ),
       resolvers += Opts.resolver.sonatypeReleases,
@@ -36,8 +36,8 @@ object Build extends Build {
     )
 
   object Version {
-    val scala = "2.10.0"
-    val akka = "2.1.0"
+    val scala = "2.10.3"
+    val akka = "2.2.4"
   }
 
   object Dependency {
