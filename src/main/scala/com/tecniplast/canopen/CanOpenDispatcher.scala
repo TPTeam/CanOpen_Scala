@@ -5,15 +5,20 @@ import com.typesafe.config._
 import com.tecniplast.device.CanDevice._
 import CanOpenMessages._
 import com.tecniplast.canopen._
+import com.tecniplast.canopen.CanOpenDispatcher._
 /*
  * This actor register ActorRef consumers with type and dipatch messages
  * "per type"
  * 
  */
 object CanOpenDispatcher {
-  case object GetPDOManager
-  case object GetSDOManager
-  case object GetNMTManager
+  case class GetPDOManager()
+  case class GetSDOManager()
+  case class GetNMTManager()
+  
+  case class RefPDOManager(ref: ActorRef)
+  case class RefSDOManager(ref: ActorRef)
+  case class RefNMTManager(ref: ActorRef)
 }
 
 case class CanOpenDispatcher(
@@ -88,6 +93,12 @@ case class CanOpenDispatcher(
       context.parent ! CanClose
       context.children.foreach(c => context.stop(c))
       context.stop(self)
+    case x: GetPDOManager =>
+      sender ! RefPDOManager(pdo_manager)
+    case x: GetSDOManager =>
+      sender ! RefSDOManager(sdo_manager)
+    case x: GetNMTManager =>
+      sender ! RefNMTManager(nmt_manager)
     //To implement a Manager Setter / Getter  
     case any => println("Can dispatcher received unknown message "+any+" from "+sender.path.toString)
   }

@@ -45,9 +45,9 @@ object NMT {
       }
   }
   case class NodeBootingUp(address: Int) 	extends NMTStatus(address, STATUS_INITIALISING) 
-  case class NodeIdling(address: Int) 		extends NMTStatus(address, STATUS_STOPPED)
+  case class NodeIdling(address: Int) 		extends NMTStatus(address, STATUS_PRE_OPERATIONAL)
   case class NodeStarted(address: Int) 		extends NMTStatus(address, STATUS_OPERATIONAL)
-  case class NodeStopped(address: Int)	 	extends NMTStatus(address, STATUS_PRE_OPERATIONAL)
+  case class NodeStopped(address: Int)	 	extends NMTStatus(address, STATUS_STOPPED)
   
   case class NodeUnWatched(address: Int)
  

@@ -83,6 +83,9 @@ object SDO {
     require(
         value.length <= data_max_len
         )
+    
+    def getAddress = address
+    
     def getByte0 =
       0x40 & 0x03 & (data_max_len-value.length << 2)
   }

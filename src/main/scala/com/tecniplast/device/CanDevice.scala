@@ -3,6 +3,8 @@ package com.tecniplast.device
 import com.sun.jna._
 import com.tecniplast.nativeInterface._
 import akka.actor._
+import com.tecniplast.device.CanDevice.GetDispatcher
+import com.tecniplast.device.CanDevice.RefDispatcher
 
 object CanDevice {
   case object CanOpened
@@ -14,6 +16,9 @@ object CanDevice {
 
   case class CanMsgReceived(id: Long, msg: Array[Byte], flags: Int)
   case class CanMsgSend(id: Long, msg: Array[Byte], flags: Int)
+  
+  case class GetDispatcher()
+  case class RefDispatcher(ref: ActorRef)
 }
 
 case class CanDevice(port: Int)(dispatcher_prop: Props) 
@@ -39,6 +44,8 @@ case class CanDevice(port: Int)(dispatcher_prop: Props)
       context.become(operative, true)
     case CanDevice.CanNotOpened =>
       context.become(openCanDevice, true)
+    case x: GetDispatcher =>
+      sender ! RefDispatcher(dispatcher)
     case earlyMsg =>
       self ! earlyMsg
   }
@@ -50,6 +57,8 @@ case class CanDevice(port: Int)(dispatcher_prop: Props)
       writeMessage(msg.id,msg.msg,msg.flags)
     case CanDevice.CanClose =>
       context.become(closeCanDevice, true)
+    case x: GetDispatcher =>
+      sender ! RefDispatcher(dispatcher)
   }
 
   def closeCanDevice: PartialFunction[Any,Unit] = {
