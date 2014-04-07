@@ -13,7 +13,8 @@ object Build extends Build {
         Dependency.Compile.akkaKernel,
         Dependency.Compile.akkaSlf4j,
         Dependency.Compile.logbackClassic,
-		Dependency.Compile.jna
+		Dependency.Compile.jna,
+		Dependency.Compile.purejavacomm
       )
     )
   )
@@ -21,7 +22,7 @@ object Build extends Build {
   def commonSettings = Defaults.defaultSettings ++ 
     Seq(
       organization := "com.tecniplast",
-      version := "0.0.4",
+      version := "0.0.5",
       scalaVersion := Version.scala,
       scalacOptions ++= Seq(
         "-unchecked",
@@ -31,7 +32,11 @@ object Build extends Build {
         //"-target:jvm-1.6",
         "-encoding", "UTF-8"
       ),
-      resolvers += Opts.resolver.sonatypeReleases,
+      resolvers ++= 
+      Seq(
+		Opts.resolver.sonatypeReleases ,
+		"sparetimelabs" at "http://www.sparetimelabs.com/maven2/"
+      ),
       retrieveManaged := true
     )
 
@@ -49,6 +54,7 @@ object Build extends Build {
       val akkaKernel = 		"com.typesafe.akka" %% "akka-kernel" % Version.akka
       val logbackClassic = 	"ch.qos.logback" % "logback-classic" % "1.0.7"
 	  val jna = 			"net.java.dev.jna" % "jna" % "3.5.2"
+	  val purejavacomm = 	"com.sparetimelabs" % "purejavacomm" % "0.0.21" classifier ""
     }
 
   }
