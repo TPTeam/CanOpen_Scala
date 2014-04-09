@@ -306,8 +306,6 @@ object CanUsbCommands {
             } yield {
               Integer.parseInt(new String(Array(arr(i),arr(i+1))),16).toByte
             }).toArray
-
-            println()
             
              TransmitStdCanFrame(id, content)
           } catch {
