@@ -186,7 +186,9 @@ object CanOpenMsgType {
  *  7 bit address
  */
 case class COBID(address: Int, function: Int) {
-  val addressLimit = 0x7F
+  val addressLimit =	0x80
+	// così è il vero CANOPEN
+    //0x7F
   val functionLimit =
     if (true)
     //if (!CanOpenManager.protocolVersion)

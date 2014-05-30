@@ -4,9 +4,9 @@ package com.tecniplast.canopen
 /*
  * Stato attuale e dizionario degli oggetti
  */
-object CanOpenObjectDictionary extends CanOpenObjectDictionary{}
-trait CanOpenObjectDictionary {
-  
+
+//please implement yours
+//object CanOpenObjectDictionary extends CanOpenObjectDictionary{}
   case class CanOpenDictionaryElement(
       index: Long, 
       sub_index: Int, 
@@ -20,6 +20,7 @@ trait CanOpenObjectDictionary {
       sub_index
     
   }
+trait CanOpenObjectDictionary {
   
   def getElement
   		(name: String)

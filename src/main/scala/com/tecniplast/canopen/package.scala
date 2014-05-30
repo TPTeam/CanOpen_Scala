@@ -3,7 +3,8 @@ package com.tecniplast
 package object canopen {
 
   implicit def +- (x: Int): Byte =
-    if (x>Byte.MaxValue.toInt || x<=Byte.MinValue.toInt) {
+    if (x == 0xFF) 0xFF.toByte
+    else if (x>Byte.MaxValue.toInt || x<=Byte.MinValue.toInt) {
       ((x & 0x7F) * (-(x >> 7))).toByte
     } else x.toByte
     

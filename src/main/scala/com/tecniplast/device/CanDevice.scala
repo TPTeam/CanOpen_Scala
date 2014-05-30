@@ -236,7 +236,8 @@ case class CanUSBDevice(serial_port: String)(dispatcher_prop: Props)
       case rtr : TransmitRtrCanFrame =>
         Some(CanDevice.CanMsgReceived(rtr.id,Array(rtr.dlc.toByte),MSGTYPE_RTR))
       case _ =>
-        println("nothing but "+arr.map(CanUsbCommands.get2DigitsHex(_)).mkString("["," ","]"))
+        //sometimes happens..
+        //println("nothing but "+arr.map(CanUsbCommands.get2DigitsHex(_)).mkString("["," ","]"))
         None
     }
   }
@@ -309,7 +310,7 @@ object CanUsbCommands {
             
              TransmitStdCanFrame(id, content)
           } catch {
-            case err : Throwable => err.printStackTrace();NOP()
+            case err : Throwable => /*err.printStackTrace();*/NOP()
           }
         case 'r' =>
           println("TODO received r message")
@@ -369,4 +370,139 @@ object CanUsbCommands {
 }
 case class CanUsbMessage(arr: Array[Byte]) {
   
+}
+
+/*
+ * CAN JNI
+ */
+object CanJniInterface {
+  import com.tecniplast.jni._
+  //Devono essere sincronizzati o posso dispatcheare in altra maniera?
+  lazy val jni = new CanJni()
+  
+  def setDevice(device: CanJniDevice,num: Int) =
+    jni.setDriver(device,num)
+    
+  def openPort(num: Int, bitrate: Int): Int =
+    jni.openPort(num, bitrate)
+
+  def closePort(num: Int): Int =
+    jni.closePort(num)
+    
+  def writeMsg(num: Int ,id: Long,length: Int,flags: Int,tmp_msg: Array[Byte]): Int = 
+    jni.writeMsg(num,id,length,flags,tmp_msg)
+
+}
+
+case class CanJniDevice(port: Int)(dispatcher_prop: Props) 
+	extends AbstractCanDevice(dispatcher_prop) with
+	CanJniLibraryActorWrapper {
+  val portNumber = port
+  //only for debugging purposes looks not working
+  //setEcho(true)
+  
+  def receive = {
+    openCanDevice
+  }
+
+  def openCanDevice: PartialFunction[Any,Unit] = {
+    openPort
+    _openCanDevice
+  }
+  def _openCanDevice: PartialFunction[Any,Unit] = {
+    case CanDevice.CanOpened =>
+      context.become(operative, true)
+    case CanDevice.CanNotOpened =>
+      context.become(openCanDevice, true)
+    case x: GetDispatcher =>
+      sender ! RefDispatcher(dispatcher)
+    case earlyMsg =>
+      self ! earlyMsg
+  }
+
+  def operative: PartialFunction[Any,Unit] = {
+    case msg: CanDevice.CanMsgReceived =>
+      dispatcher ! msg
+    case msg : CanDevice.CanMsgSend =>
+      writeMessage(msg.id,msg.msg,msg.flags)
+    case CanDevice.CanClose =>
+      context.become(closeCanDevice, true)
+    case x: GetDispatcher =>
+      sender ! RefDispatcher(dispatcher)
+  }
+
+  def closeCanDevice: PartialFunction[Any,Unit] = {
+    closePort
+    _closeCanDevice
+  }
+  def _closeCanDevice: PartialFunction[Any,Unit] = {
+  	case CanDevice.CanClosed =>
+      context.stop(self)
+    case CanDevice.CanNotClosed =>
+      context.become(closeCanDevice, true)
+  }
+
+  override def postStop = closePort
+
+}
+import com.tecniplast.jni.CanJniInterfacePojo
+trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
+  me: CanJniDevice =>
+  def portNumber: Int
+
+  import CanLibrary.BitRate._
+  val bitrate = CAN_BAUD_1M
+  
+  def msgReaded(id: Long,
+                dlc: Int,
+                flags: Int,
+                msg: Array[Byte]) = {
+    self ! CanDevice.CanMsgReceived(id,
+    								msg.toSeq.slice(0, dlc).toArray,
+    								flags)
+  }
+
+  def openPort() = {
+	try {
+	 CanJniInterface.setDevice(this, portNumber)
+		if (CanJniInterface.openPort(portNumber,bitrate)==0)
+			self ! CanDevice.CanOpened
+		else
+			self ! CanDevice.CanNotOpened
+	} catch {
+	  case err : Throwable =>
+	    err.printStackTrace
+	    self ! CanDevice.CanNotOpened
+	}
+  }
+
+  def closePort() = {
+    try {
+	CanJniInterface.setDevice(null, portNumber)
+		if (CanJniInterface.closePort(portNumber)==0)
+			self ! CanDevice.CanClosed
+		else
+			self ! CanDevice.CanNotClosed
+	} catch {
+	  case err : Throwable =>
+	    err.printStackTrace
+	    self ! CanDevice.CanNotClosed
+	}
+  }
+
+  final val MAX_MSG_SIZE = 8
+ 
+  def writeMessage(id: Long, msg: Array[Byte],flags: Int): Boolean = {
+    try {
+      val length = if (msg.length<MAX_MSG_SIZE) msg.length else MAX_MSG_SIZE
+      val tmp_msg = msg.slice(0, length)
+      
+      (CanJniInterface.writeMsg(portNumber,id,length,flags,tmp_msg) == 0)
+    } catch {
+      case err: Throwable =>
+        err.printStackTrace
+        false
+    }
+  }
+
 }

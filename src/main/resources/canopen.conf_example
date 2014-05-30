@@ -1,0 +1,10 @@
+protocolVersion = A
+
+#dispatcher {
+#	receive {
+#		verbose = true
+#	}
+#	send {
+#		verbose = true
+#	}
+#}

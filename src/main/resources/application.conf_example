@@ -1,0 +1,27 @@
+
+sdo-prio-dispatcher {
+	mailbox-type = "com.tecniplast.canopen.SDO_PrioMailbox"
+  	//Other dispatcher configuration goes here
+}
+
+akka {
+  event-handlers = [akka.event.slf4j.Slf4jEventHandler]
+  #loglevel = debug
+  
+  actor {
+  	debug {
+  		lifecycle = on
+  	 }
+  }
+}
+
+serialPort = "ttyS0"
+
+dispatcher {
+	receive {
+		verbose = true
+	}
+	send {
+		verbose = true
+	}
+}

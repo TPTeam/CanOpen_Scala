@@ -58,12 +58,12 @@ case class CanOpenDispatcher(
   def receive = {
     case msg: SendCanOpenMessage =>
       if (send_verbose)
-    	  println(self.path+" sending CAN RAW "+get4DigitsHex(msg.toCan.id)+" "+printMsg(msg.toCan.msg)+" "+msg.toCan.flags)
+    	  println(new java.util.Date+" "+self.path+" sending CAN RAW "+get4DigitsHex(msg.toCan.id)+" "+printMsg(msg.toCan.msg)+" "+msg.toCan.flags)
       context.parent ! msg.toCan
       
     case CanMsgReceived(id, msg, flags) =>
       if (receive_verbose)
-    	  println(self.path+" received CAN RAW "+get4DigitsHex(id)+" "+printMsg(msg)+" "+flags)
+    	  println(new java.util.Date+" "+self.path+" received CAN RAW "+get4DigitsHex(id)+" "+printMsg(msg)+" "+flags)
       RecivedCanOpenMessage(id,msg,flags) match {
         case tpdo : ReceivedTPDO =>
           //if (verbose)
