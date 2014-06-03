@@ -22,7 +22,7 @@ object Build extends Build {
   def commonSettings = Defaults.defaultSettings ++ 
     Seq(
       organization := "com.tecniplast",
-      version := "0.0.20",
+      version := "0.0.32",
       scalaVersion := Version.scala,
       scalacOptions ++= Seq(
         "-unchecked",

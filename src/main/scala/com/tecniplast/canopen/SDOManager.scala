@@ -198,23 +198,26 @@ abstract class SDOManager() extends Actor {
   
   def getNameFromMsg(msg: ReceivedCanOpenMessage): String =
     "" + msg.getAddress +
+//    msg.getMessage.mkString("")
        + msg.getMessage(1) +
        + msg.getMessage(2) +
        + msg.getMessage(3)
+
   def getNameFromMsg(msg: SDOToSend): String =
     "" + msg.getAddress +
+    //msg.getMessage.value.mkString("")
        + msg.getDictObj.getIndex(0) +
        + msg.getDictObj.getIndex(1) +
-       + msg.getDictObj.getSubIndex
-  
+       + msg.getDictObj.getSubIndex 
+    
   def getBlockName(msg: ReceivedCanOpenMessage): String =
     "" + msg.getAddress + "block"
   def getBlockName(msg: SDOToSend): String =
     "" + msg.getAddress + "block"
-    
+  
   def receive = {
     case rq: SDOToSend => 
-      val actualSender = sender
+      val actualSender = sender.path
       val actName = getNameFromMsg(rq)
       val blockName = getBlockName(rq)
       if (context.child(actName).isEmpty && context.child(blockName).isEmpty) {
@@ -234,11 +237,30 @@ abstract class SDOManager() extends Actor {
     	  }
     	  
   	  } else {
+  	    //println("[SDO MANAGER] -> Request still present "+actName+" "+context.child(actName).isEmpty)
   	    //too late
-  	    //import context.dispatcher
-  	    //context.system.scheduler.scheduleOnce(respTimeout)(actualSender forward rq)
+  	    import context.dispatcher
+  	    /* così funziona
+  	    context.system.scheduler.scheduleOnce(rq.respTimeout)(
+  	        self.tell(rq,context.actorFor(actualSender))
+  	    )*/
+  	    //così è più elegante
+  	    //provo con un ritardo minimo
+  	    context.system.scheduler.scheduleOnce(10 millis)({
+            for {
+              realSend <- context.system.actorSelection(actualSender).resolveOne(1 second)
+            } yield {
+              self.tell(rq,realSend)
+            }
+  	    })
   	    
+  	    /* NON mantiene integrità sul sender...
+  	    context.system.scheduler.scheduleOnce(rq.respTimeout)(
+  	        self forward rq
+  	    )
+  	    */
   	    //println("children yet present?? "+actName)
+  	    //self.forward(rq)
   	    //self ! rq
   	  }
     case resp: ReceivedCanOpenMessage =>
@@ -248,6 +270,8 @@ abstract class SDOManager() extends Actor {
       } else {
     	  val childOpt = 
     			  context.child(getNameFromMsg(resp))
+    			  
+    	  //println("Risposta per "+getNameFromMsg(resp)+" "+childOpt.isDefined)
     	  if (childOpt.isDefined)
     		  childOpt.map(_ ! resp)
       }
@@ -259,13 +283,15 @@ abstract class SDOManager() extends Actor {
       println("SDO manager received unmanaged "+any+" "+sender.path)
   }
   
-  case class SDORequestActor(msgToSend: SDOToSend,answareTo: ActorRef, okMask : Byte, delay: FiniteDuration) extends Actor {
+  case class SDORequestActor(msgToSend: SDOToSend,_answareTo: ActorPath, okMask : Byte, delay: FiniteDuration) extends Actor {
     import context.dispatcher
 	case object Timeout
 	
 	val sendedMsg = msgToSend.getMessage
 	
     context.parent ! sendedMsg
+    
+    def answareTo = context.actorSelection(_answareTo)
      
     def doTimeout =
     	context.system.scheduler.scheduleOnce(delay)(self ! Timeout)
@@ -283,10 +309,13 @@ abstract class SDOManager() extends Actor {
 	def waitAnswareAndRetry(retry: Int, timeout: Cancellable): PartialFunction[Any,Unit] = {
 	   case resp: ReceivedTSSDOCanOpenMessage =>
         if (checkResponse(resp)) {
+          //println("ok qui devo rispondere!!")
+          
           if (((resp.message(0) & 0xE0) == okMask)) {
-            if (okMask == 0x40)
+            if (okMask == 0x40.toByte) {
+              //println("Avanti da qui!!!")
               answareTo ! requestResponceResolver(resp)
-            else if (okMask == 0x60)
+            } else if (okMask == 0x60.toByte)
               answareTo ! commandResponceResolver(resp)
             else
               println("Message not managed in this way.")
@@ -295,10 +324,11 @@ abstract class SDOManager() extends Actor {
         	  timeout.cancel
         	  context.stop(self)
           } else {
+            println("received timeout! "+retry)
             if (retry<=0) {
-            	if (okMask == 0x40)
+            	if (okMask == 0x40.toByte)
             		answareTo ! requestResponceResolver(sendedMsg)
-            	else if (okMask == 0x60)
+            	else if (okMask == 0x60.toByte)
             		answareTo ! commandResponceResolver(sendedMsg)
             	else
             		println("Message not managed in this way.")
@@ -324,13 +354,15 @@ abstract class SDOManager() extends Actor {
     
   }
   
-  case class SDOBlockRequestActor(msgToSend: SDOBlockRequest,answareTo: ActorRef, okMask : Byte, delay: FiniteDuration) extends Actor {
+  case class SDOBlockRequestActor(msgToSend: SDOBlockRequest,_answareTo: ActorPath, okMask : Byte, delay: FiniteDuration) extends Actor {
 	case object Timeout
 	
 	//DA FINIRE DI IMPLEMENTARE
 
 	val sendedMsg = msgToSend.getMessage
 
+	def answareTo = context.actorSelection(_answareTo)
+	
     context.parent ! sendedMsg
     val initDate = new java.util.Date().getTime
      
