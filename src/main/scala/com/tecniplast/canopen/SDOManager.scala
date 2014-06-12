@@ -198,14 +198,12 @@ abstract class SDOManager() extends Actor {
   
   def getNameFromMsg(msg: ReceivedCanOpenMessage): String =
     "" + msg.getAddress +
-//    msg.getMessage.mkString("")
        + msg.getMessage(1) +
        + msg.getMessage(2) +
        + msg.getMessage(3)
 
   def getNameFromMsg(msg: SDOToSend): String =
     "" + msg.getAddress +
-    //msg.getMessage.value.mkString("")
        + msg.getDictObj.getIndex(0) +
        + msg.getDictObj.getIndex(1) +
        + msg.getDictObj.getSubIndex 
@@ -223,7 +221,9 @@ abstract class SDOManager() extends Actor {
       if (context.child(actName).isEmpty && context.child(blockName).isEmpty) {
     	  (rq) match {
     	    case r: SDORequest =>
-    	      context.actorOf(Props(SDORequestActor(r,actualSender,0x40,r.respTimeout)),actName)
+    	      context.actorOf(
+    	          Props(
+    	              SDORequestActor(r,actualSender,0x40,r.respTimeout)),actName)
     	    case c: SDOCommand =>
     	      context.actorOf(
     	          Props(
@@ -312,25 +312,25 @@ abstract class SDOManager() extends Actor {
           //println("ok qui devo rispondere!!")
           
           if (((resp.message(0) & 0xE0) == okMask)) {
+            
+            //Togliere l'if e sistemare la gestione
             if (okMask == 0x40.toByte) {
-              //println("Avanti da qui!!!")
               answareTo ! requestResponceResolver(resp)
-            } else if (okMask == 0x60.toByte)
+            } else if (okMask == 0x60.toByte) {
               answareTo ! commandResponceResolver(resp)
-            else
+            } else
               println("Message not managed in this way.")
             
         	  //answareTo ! requestResponceResolver(resp)
         	  timeout.cancel
         	  context.stop(self)
           } else {
-            println("received timeout! "+retry)
             if (retry<=0) {
-            	if (okMask == 0x40.toByte)
+            	if (okMask == 0x40.toByte) {
             		answareTo ! requestResponceResolver(sendedMsg)
-            	else if (okMask == 0x60.toByte)
+            	} else if (okMask == 0x60.toByte) {
             		answareTo ! commandResponceResolver(sendedMsg)
-            	else
+            	} else
             		println("Message not managed in this way.")
             		
             	//answareTo ! requestResponceResolver(sendedMsg)
@@ -346,7 +346,13 @@ abstract class SDOManager() extends Actor {
         	context.become(waitAnswareAndRetry(retry-1, doTimeout), true)
         	context.parent ! sendedMsg
         } else {
-        	answareTo ! requestResponceResolver(sendedMsg)
+        	if (okMask == 0x40.toByte) {
+            	answareTo ! requestResponceResolver(sendedMsg)
+           	} else if (okMask == 0x60.toByte) {
+            	answareTo ! commandResponceResolver(sendedMsg)
+           	} else 
+           	  	println("Message not managed in this way.")
+        	//answareTo ! requestResponceResolver(sendedMsg)
         	timeout.cancel
         	context.stop(self)
         }

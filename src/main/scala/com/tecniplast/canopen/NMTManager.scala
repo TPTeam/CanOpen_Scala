@@ -36,6 +36,8 @@ object NMT {
   class NMTStatus(address: Int, status: Int) {
     def getAddress = address
     
+    def getStatus = status
+    
     def msg = 
       (status) match {
       	case STATUS_INITIALISING 	=> 	NodeBootingUp(address)
