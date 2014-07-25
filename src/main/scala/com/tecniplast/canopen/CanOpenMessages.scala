@@ -31,7 +31,7 @@ object CanOpenMessages {
   	    CanOpenIdNMT(address).cobid.getId,
   	    Array(),
   	    MSGTYPE_STANDARD)
-  
+   
   case class SendTPDOCanOpenMessage(number: Int, address: Int, value: Array[Byte]) 
   	extends SendCanOpenMessage(
   	    CanOpenIdTPDO(number,address).cobid.getId,
@@ -77,13 +77,18 @@ object CanOpenMessages {
   	    CanOpenIdRCSDO(address).cobid.getId,
   	    stdSize(value),
   	    MSGTYPE_STANDARD)
-  /*
-  case class SendTimeStampCanOpenMessage() 
+  
+  case class SendTimeStampCanOpenMessage(timestamp: Long) 
   	extends SendCanOpenMessage(
   	    CanOpenTimeStamp.cobid.getId,
-  	    Array(),
+  	    Array(
+  	    ((timestamp >> 24) & 0xFF),
+  	    ((timestamp >> 16) & 0xFF),
+  	    ((timestamp >> 8 ) & 0xFF),
+  	    ((timestamp		 ) & 0xFF)
+  	    ),
   	    MSGTYPE_STANDARD)
-  */
+  
   abstract class ReceivedCanOpenMessage(function: Int,address: Int, message: Array[Byte]) {
     	def getAddress = address
     	def getMessage = message

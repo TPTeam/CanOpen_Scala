@@ -17,6 +17,8 @@ object CanDevice {
   case class CanMsgReceived(id: Long, msg: Array[Byte], flags: Int)
   case class CanMsgSend(id: Long, msg: Array[Byte], flags: Int)
   
+  case class FirmwareDownload(address: Int, filePath: String)
+  
   case class GetDispatcher()
   case class RefDispatcher(ref: ActorRef)
 }
@@ -33,10 +35,7 @@ case class CanDevice(port: Int)(dispatcher_prop: Props)
   }
 
   def openCanDevice: PartialFunction[Any,Unit] = {
-    openPort
-    _openCanDevice
-  }
-  def _openCanDevice: PartialFunction[Any,Unit] = {
+    def _openCanDevice: PartialFunction[Any,Unit] = {
     case CanDevice.CanOpened =>
       context.become(operative, true)
     case CanDevice.CanNotOpened =>
@@ -46,6 +45,12 @@ case class CanDevice(port: Int)(dispatcher_prop: Props)
     case earlyMsg =>
       self ! earlyMsg
   }
+    
+    
+    openPort
+    _openCanDevice
+  }
+  
 
   def operative: PartialFunction[Any,Unit] = {
     case msg: CanDevice.CanMsgReceived =>
@@ -388,10 +393,23 @@ object CanJniInterface {
 
   def closePort(num: Int): Int =
     jni.closePort(num)
-    
+  
   def writeMsg(num: Int ,id: Long,length: Int,flags: Int,tmp_msg: Array[Byte]): Int = 
-    jni.writeMsg(num,id,length,flags,tmp_msg)
+    synchronized  {
+    	jni.writeMsg(num,id,length,flags,tmp_msg)
+    }
 
+  def firmwareDownload(num: Int, address: Int, filePath: String) = 
+    synchronized  {
+    	jni.fwDownload( num, address,filePath)
+    }
+    
+  val device_verbose = 
+    try {
+    	com.typesafe.config.ConfigFactory.load("canopen.conf").getBoolean("device.receive.verbose")
+    } catch {
+      case _: Throwable => false
+    }
 }
 
 case class CanJniDevice(port: Int)(dispatcher_prop: Props) 
@@ -425,6 +443,10 @@ case class CanJniDevice(port: Int)(dispatcher_prop: Props)
       dispatcher ! msg
     case msg : CanDevice.CanMsgSend =>
       writeMessage(msg.id,msg.msg,msg.flags)
+    case msg: CanDevice.FirmwareDownload =>
+      println("Downloading firmware "+msg.filePath+" on board "+msg.address)
+      val res = firmwareDownload(msg.address, msg.filePath)
+      println("Firmware downloaded? "+res)
     case CanDevice.CanClose =>
       context.become(closeCanDevice, true)
     case x: GetDispatcher =>
@@ -457,9 +479,23 @@ trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
                 dlc: Int,
                 flags: Int,
                 msg: Array[Byte]) = {
+    //DA TESTARE
+    try {
+      //DEBUG
+      def printMsg(arr: Array[Byte]): String = {
+    		  import com.tecniplast.canopen._
+    		  arr.map(a => get2DigitsHex(a)).mkString("[",",","]")
+      }
+      
+    if (CanJniInterface.device_verbose)
+    	println("DEBUG DEVICE Message readed ID: "+id+" MSG: "+printMsg(msg)+" FLAGS: "+flags+" DLC: "+dlc)
+    	
     self ! CanDevice.CanMsgReceived(id,
     								msg.toSeq.slice(0, dlc).toArray,
     								flags)
+    } catch {
+      case err: Throwable => err.printStackTrace()
+    }
   }
 
   def openPort() = {
@@ -498,6 +534,16 @@ trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
       val tmp_msg = msg.slice(0, length)
       
       (CanJniInterface.writeMsg(portNumber,id,length,flags,tmp_msg) == 0)
+    } catch {
+      case err: Throwable =>
+        err.printStackTrace
+        false
+    }
+  }
+  
+  def firmwareDownload(address: Int, filePath: String): Boolean = {
+    try {
+      (CanJniInterface.firmwareDownload(portNumber, address, filePath) == 0)
     } catch {
       case err: Throwable =>
         err.printStackTrace

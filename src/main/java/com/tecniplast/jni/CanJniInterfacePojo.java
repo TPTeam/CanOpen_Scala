@@ -12,5 +12,7 @@ public interface CanJniInterfacePojo {
 	public void closePort();
 
 	public boolean writeMessage(long id, byte[] msg, int flags);
+	
+	public boolean firmwareDownload(int address, String filePath);
 
 }

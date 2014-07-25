@@ -21,7 +21,7 @@ object CanOpenDispatcher {
   case class RefNMTManager(ref: ActorRef)
 }
 
-case class CanOpenDispatcher(
+class CanOpenDispatcher(
 		pdo_manager_type: Props,
 		sdo_manager_type: Props,
 		nmt_manager_type: Props
@@ -43,8 +43,7 @@ case class CanOpenDispatcher(
   
   val pdo_manager =
     context.actorOf(pdo_manager_type,"pdo_manager")
-    
-    //
+
   val sdo_manager =
     context.actorOf(sdo_manager_type.withDispatcher("sdo-prio-dispatcher"),"sdo_manager")
     
@@ -56,51 +55,42 @@ case class CanOpenDispatcher(
   }
   
   def receive = {
-    case msg: SendCanOpenMessage =>
-      if (send_verbose)
-    	  println(new java.util.Date+" "+self.path+" sending CAN RAW "+get4DigitsHex(msg.toCan.id)+" "+printMsg(msg.toCan.msg)+" "+msg.toCan.flags)
-      context.parent ! msg.toCan
+    managersGetter orElse {
+    	case msg: SendCanOpenMessage =>
+    		if (send_verbose)
+    			println(new java.util.Date+" "+self.path+" sending CAN RAW "+get4DigitsHex(msg.toCan.id)+" "+printMsg(msg.toCan.msg)+" "+msg.toCan.flags)
+    		context.parent ! msg.toCan
       
-    case CanMsgReceived(id, msg, flags) =>
-      if (receive_verbose)
-    	  println(new java.util.Date+" "+self.path+" received CAN RAW "+get4DigitsHex(id)+" "+printMsg(msg)+" "+flags)
-      RecivedCanOpenMessage(id,msg,flags) match {
-        case tpdo : ReceivedTPDO =>
-          //if (verbose)
-          //  println(self.path+" received TPDO "+get4DigitsHex(id)+" "+printMsg(msg))
-          pdo_manager ! tpdo
-        case rpdo : ReceivedRPDO =>
-          //if (verbose)
-          //	  println(self.path+" received RPDO "+get4DigitsHex(id)+" "+printMsg(msg))
-          pdo_manager ! rpdo
-        case sdo : ReceivedSDO =>
-          //println(self.path+/*" "+new java.util.Date().getTime()+*/" received SDO "+get4DigitsHex(id)+" "+printMsg(msg))
-          sdo_manager ! sdo
-        case nmt : ReceivedNMT =>
-          //println(self.path+" received NMT "+get4DigitsHex(id)+" "+printMsg(msg))
-          nmt_manager ! nmt
-        case sync : ReceivedSYNC =>
-          //if (verbose)
-          //  println(self.path+" received SYNC "+get4DigitsHex(id)+" "+printMsg(msg))
-        case emergency: ReceivedEMERGENCY =>
-          //if (verbose)
-          //  println(self.path+" received EMERGENCY "+get4DigitsHex(id)+" "+printMsg(msg))
-        case timestamp: ReceivedTIMESTAMP =>
-          //if (verbose)
-          //	  println(self.path+"received TimeStamp "+get4DigitsHex(id)+" "+printMsg(msg))
-      }
-    case CanClose => 
-      context.parent ! CanClose
-      context.children.foreach(c => context.stop(c))
-      context.stop(self)
+    	case CanMsgReceived(id, msg, flags) =>
+    		if (receive_verbose)
+    			println(new java.util.Date+" "+self.path+" received CAN RAW "+get4DigitsHex(id)+" "+printMsg(msg)+" "+flags)
+    		RecivedCanOpenMessage(id,msg,flags) match {
+    			case tpdo : ReceivedTPDO =>
+    				pdo_manager ! tpdo
+    			case rpdo : ReceivedRPDO =>
+    				pdo_manager ! rpdo
+    			case sdo : ReceivedSDO =>
+    				sdo_manager ! sdo
+    			case nmt : ReceivedNMT =>
+    				nmt_manager ! nmt
+    			case sync : ReceivedSYNC =>
+    			case emergency: ReceivedEMERGENCY =>
+    			case timestamp: ReceivedTIMESTAMP =>
+    		}
+    	case CanClose => 
+    		context.parent ! CanClose
+    		context.children.foreach(c => context.stop(c))
+    		context.stop(self)
+    }
+  }
+  
+  def managersGetter: Receive = {
     case x: GetPDOManager =>
       sender ! RefPDOManager(pdo_manager)
     case x: GetSDOManager =>
       sender ! RefSDOManager(sdo_manager)
     case x: GetNMTManager =>
       sender ! RefNMTManager(nmt_manager)
-    //To implement a Manager Setter / Getter  
-    case any => println("Can dispatcher received unknown message "+any+" from "+sender.path.toString)
   }
   
 }

@@ -39,12 +39,18 @@ public class CanJni {
 	
 	public synchronized native int closePort(int device);
 	
-	public native int writeMsg(
+	public synchronized native int writeMsg(
 			int device,
 			long id,
 			int length,
 			int flags,
 			byte[] msg);
+	
+	public native int fwDownload(
+			int device,
+			int address,
+			String filePath
+			);
 	
 	static{
 	    System.loadLibrary("C-Can-JNI-ScalaBridge");

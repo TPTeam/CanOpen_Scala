@@ -59,7 +59,7 @@ object SDO {
     def getByte0 =
       0x20 + 0x03
     
-      //probabilmente baco sul protocollo Micrichip
+      //probabilmente baco sul protocollo Microchip
       //+ (data_max_len-value.length << 2)
     val completeArr: Array[Byte] = Array(0x00,0x00,0x00,0x00)
     val extendedValue: Array[Byte] = (value ++: completeArr).take(4)

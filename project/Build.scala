@@ -3,7 +3,7 @@ import sbt.Keys._
 
 object Build extends Build {
 
-  lazy val rfid_reader = Project(
+  lazy val project = Project(
     "CanOpen_Scala",
     file("."),
     settings = commonSettings ++ Seq(
@@ -22,7 +22,7 @@ object Build extends Build {
   def commonSettings = Defaults.defaultSettings ++ 
     Seq(
       organization := "com.tecniplast",
-      version := "0.0.36",
+      version := "0.0.49_alpha",
       scalaVersion := Version.scala,
       scalacOptions ++= Seq(
         "-unchecked",

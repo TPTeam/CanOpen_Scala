@@ -19,6 +19,12 @@ package com.tecniplast.canopen
     def getSubIndex: Byte =
       sub_index
     
+    override def equals(x: Any) =
+      x match {
+      	case code: CanOpenDictionaryElement => 
+      	  (index == code.index && sub_index == code.sub_index)
+      	case _ => false
+      }
   }
 trait CanOpenObjectDictionary {
   
