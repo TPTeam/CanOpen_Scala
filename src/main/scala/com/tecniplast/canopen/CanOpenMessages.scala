@@ -82,10 +82,10 @@ object CanOpenMessages {
   	extends SendCanOpenMessage(
   	    CanOpenTimeStamp.cobid.getId,
   	    Array(
-  	    ((timestamp >> 24) & 0xFF),
-  	    ((timestamp >> 16) & 0xFF),
-  	    ((timestamp >> 8 ) & 0xFF),
-  	    ((timestamp		 ) & 0xFF)
+  	    ((timestamp >> 24) & 0xFF).toByte,
+  	    ((timestamp >> 16) & 0xFF).toByte,
+  	    ((timestamp >> 8 ) & 0xFF).toByte,
+  	    ((timestamp      ) & 0xFF).toByte
   	    ),
   	    MSGTYPE_STANDARD)
   

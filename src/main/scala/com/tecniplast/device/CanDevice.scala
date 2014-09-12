@@ -430,6 +430,7 @@ case class CanJniDevice(port: Int)(dispatcher_prop: Props)
   def _openCanDevice: PartialFunction[Any,Unit] = {
     case CanDevice.CanOpened =>
       context.become(operative, true)
+      //context.become(operative_queue(Seq()), true)
     case CanDevice.CanNotOpened =>
       context.become(openCanDevice, true)
     case x: GetDispatcher =>
@@ -452,6 +453,51 @@ case class CanJniDevice(port: Int)(dispatcher_prop: Props)
     case x: GetDispatcher =>
       sender ! RefDispatcher(dispatcher)
   }
+  
+  /*
+  case class Remove(sent: CanDevice.CanMsgSend)
+  def compareMsgs(x1: Array[Byte], x2: Array[Byte]): Boolean = {
+    if (x1.length == 1 && x2.length == 1)
+      x1(0) == x2(0)
+    else if (x1.length <= 0 && x2.length <= 0)
+      false
+    else 
+      (x1(0) == x2(0)) && compareMsgs(x1.tail,x2.tail)
+  }
+  def operative_queue(inWrite: Seq[CanDevice.CanMsgSend]) : Receive = {
+    case msg: CanDevice.CanMsgReceived =>
+      dispatcher ! msg    
+    case msg : CanDevice.CanMsgSend =>
+      if (inWrite.exists(written => (written.id == msg.id)))
+    	  self ! msg
+      else {
+    	  import scala.concurrent._
+    	  import duration._
+    	  writeMessage(msg.id,msg.msg,msg.flags)
+    	  /*context.system.scheduler.scheduleOnce(1 millis)*/
+    	  self ! Remove(msg)
+    	  context.become(
+    		operative_queue(
+              inWrite.+:(msg)), true)
+      }
+   case rem: Remove =>
+      context.become(
+          operative_queue(
+              inWrite.filterNot(written => {
+                written.id == rem.sent.id &&
+                written.flags == rem.sent.flags &&
+                compareMsgs(written.msg, rem.sent.msg)
+              } )), true)
+    case msg: CanDevice.FirmwareDownload =>
+      println("Downloading firmware "+msg.filePath+" on board "+msg.address)
+      val res = firmwareDownload(msg.address, msg.filePath)
+      println("Firmware downloaded? "+res)
+    case CanDevice.CanClose =>
+      context.become(closeCanDevice, true)
+    case x: GetDispatcher =>
+      sender ! RefDispatcher(dispatcher)
+  }
+  */
 
   def closeCanDevice: PartialFunction[Any,Unit] = {
     closePort
@@ -528,12 +574,32 @@ trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
 
   final val MAX_MSG_SIZE = 8
  
+  import scala.concurrent._
+  
   def writeMessage(id: Long, msg: Array[Byte],flags: Int): Boolean = {
     try {
       val length = if (msg.length<MAX_MSG_SIZE) msg.length else MAX_MSG_SIZE
       val tmp_msg = msg.slice(0, length)
       
-      (CanJniInterface.writeMsg(portNumber,id,length,flags,tmp_msg) == 0)
+      //DEBUG
+      def printMsg(arr: Array[Byte]): String = {
+    		  import com.tecniplast.canopen._
+    		  arr.map(a => get2DigitsHex(a)).mkString("[",",","]")
+      }
+      
+      //println((new java.util.Date()).getTime()+" --> DEVICE Writing ID: "+id+" MSG: "+printMsg(msg)+" FLAGS: "+flags+" DLC: "+length)
+      
+     val result = CanJniInterface.writeMsg(portNumber,id,length,flags,tmp_msg)
+     if (result == 0) {}
+      else {
+        
+        println("***********************************************************")
+        println("ERRORE!")
+        println("il rilutato è: "+result)
+        println("***********************************************************")
+        
+      }
+      (result == 0)
     } catch {
       case err: Throwable =>
         err.printStackTrace

@@ -100,10 +100,12 @@ object SDO {
   //Response received from client
   class SDORequestResponse(address: Int)(dictObj: CanOpenDictionaryElement, value: Array[Byte]) {
     final val data_max_len = 0x04
+    
+    /* to manage block response...
     require(
         value.length <= data_max_len
-        )
-    
+    )
+    */
     def getAddress = address
     
     def getByte0 =
@@ -237,15 +239,8 @@ abstract class SDOManager() extends Actor {
     	  }
     	  
   	  } else {
-  	    //println("[SDO MANAGER] -> Request still present "+actName+" "+context.child(actName).isEmpty)
-  	    //too late
   	    import context.dispatcher
-  	    /* così funziona
-  	    context.system.scheduler.scheduleOnce(rq.respTimeout)(
-  	        self.tell(rq,context.actorFor(actualSender))
-  	    )*/
-  	    //così è più elegante
-  	    //provo con un ritardo minimo
+  	    //trying later
   	    context.system.scheduler.scheduleOnce(10 millis)({
             for {
               realSend <- context.system.actorSelection(actualSender).resolveOne(1 second)
@@ -253,15 +248,6 @@ abstract class SDOManager() extends Actor {
               self.tell(rq,realSend)
             }
   	    })
-  	    
-  	    /* NON mantiene integrità sul sender...
-  	    context.system.scheduler.scheduleOnce(rq.respTimeout)(
-  	        self forward rq
-  	    )
-  	    */
-  	    //println("children yet present?? "+actName)
-  	    //self.forward(rq)
-  	    //self ! rq
   	  }
     case resp: ReceivedCanOpenMessage =>
       val blockOpt = (context.child(getBlockName(resp)))
@@ -271,12 +257,9 @@ abstract class SDOManager() extends Actor {
     	  val childOpt = 
     			  context.child(getNameFromMsg(resp))
     			  
-    	  //println("Risposta per "+getNameFromMsg(resp)+" "+childOpt.isDefined)
     	  if (childOpt.isDefined)
     		  childOpt.map(_ ! resp)
       }
-      //else
-      //  println("cannot find child with name "+getNameFromMsg(resp))
     case send: SendRCSDOCanOpenMessage =>
       context.parent ! send
     case any => 
@@ -308,22 +291,18 @@ abstract class SDOManager() extends Actor {
 	      
 	def waitAnswareAndRetry(retry: Int, timeout: Cancellable): PartialFunction[Any,Unit] = {
 	   case resp: ReceivedTSSDOCanOpenMessage =>
-        if (checkResponse(resp)) {
-          //println("ok qui devo rispondere!!")
-          
+        if (checkResponse(resp)) {          
           if (((resp.message(0) & 0xE0) == okMask)) {
-            
-            //Togliere l'if e sistemare la gestione
+
             if (okMask == 0x40.toByte) {
               answareTo ! requestResponceResolver(resp)
             } else if (okMask == 0x60.toByte) {
               answareTo ! commandResponceResolver(resp)
             } else
-              println("Message not managed in this way.")
+              println("Message cannot be managed in this way.")
             
-        	  //answareTo ! requestResponceResolver(resp)
-        	  timeout.cancel
-        	  context.stop(self)
+        	timeout.cancel
+        	context.stop(self)
           } else {
             if (retry<=0) {
             	if (okMask == 0x40.toByte) {
@@ -331,9 +310,8 @@ abstract class SDOManager() extends Actor {
             	} else if (okMask == 0x60.toByte) {
             		answareTo ! commandResponceResolver(sendedMsg)
             	} else
-            		println("Message not managed in this way.")
+            		println("This fault cannot be managed in this way.")
             		
-            	//answareTo ! requestResponceResolver(sendedMsg)
             	timeout.cancel
         		context.stop(self)
             } 
@@ -352,7 +330,7 @@ abstract class SDOManager() extends Actor {
             	answareTo ! commandResponceResolver(sendedMsg)
            	} else 
            	  	println("Message not managed in this way.")
-        	//answareTo ! requestResponceResolver(sendedMsg)
+
         	timeout.cancel
         	context.stop(self)
         }
@@ -363,8 +341,6 @@ abstract class SDOManager() extends Actor {
   case class SDOBlockRequestActor(msgToSend: SDOBlockRequest,_answareTo: ActorPath, okMask : Byte, delay: FiniteDuration) extends Actor {
 	case object Timeout
 	
-	//DA FINIRE DI IMPLEMENTARE
-
 	val sendedMsg = msgToSend.getMessage
 
 	def answareTo = context.actorSelection(_answareTo)
@@ -389,16 +365,14 @@ abstract class SDOManager() extends Actor {
 	def waitAnswareAndRetry(retry: Int, timeout: Cancellable): PartialFunction[Any,Unit] = {
 	   case resp: ReceivedTSSDOCanOpenMessage =>
         if (checkResponse(resp)) {
-          //avanti da qui devo leggere il numero di pacchetti e proseguire
           timeout.cancel
           val packetToDownload =  -+(resp.getMessage(4)) + (-+(resp.getMessage(5)) << 8)
-          //println("pacchetti da scaricare  "+packetToDownload)
+
           context.become(
               sequentialReceive(packetToDownload, doTimeout(msgToSend.partTimeout), Seq()), true)
         } else {
-          println("...must not happens...")
-          answareTo ! requestResponceResolver(sendedMsg)
-          context.stop(self)
+          //message for another request maybe...
+          context.parent ! resp
         }
       case Timeout =>
         if (retry>0) {
@@ -406,29 +380,78 @@ abstract class SDOManager() extends Actor {
         	context.parent ! sendedMsg
         	context.system.scheduler.scheduleOnce(delay)(self ! Timeout)
         } else {
-        	println("TIMEOUT SU PRIMA RISPOSTA...")
-        	answareTo ! SDORequestResponse(sendedMsg)
+        	//println("TIMEOUT SU PRIMA RISPOSTA...")
+        	answareTo ! requestResponceResolver(sendedMsg)
         	context.stop(self)
         }
+	}
+	
+	//CRC calc
+	def crcCalc(buffer: Array[Byte]) = {
+		val initCrc = 0x1d0f
+    	val polynomial = 0x1021
+    
+    	val bitList = (0).to(7)
+    
+    	def bitCalc(b: Byte, part: Int, blist: Seq[Int] = bitList): Int =
+    		if (blist.isEmpty) part
+    		else {
+    			val bit = ((b   >> (7-blist.head) & 1) == 1)
+    			val c15 = ((part >> 15    & 1) == 1)
+        
+    			val newPart = 
+    				(if (c15 ^ bit) (((part << 1) ^ polynomial))
+    				else (part << 1)) & 0xFFFF
+        
+   				bitCalc(b, newPart, blist.tail)
+    		} 
+    
+    	def _crcCalc(in: Array[Byte], crc: Int): Int =
+    		if (in.isEmpty) 
+    			crc
+    		else
+    			_crcCalc(in.tail, bitCalc(in.head,crc))
+    
+    	_crcCalc(buffer, initCrc)
 	}
 	
 	def sequentialReceive(totalPacket: Int, timeout: Cancellable,buffer: Seq[ReceivedTSSDOCanOpenMessage]): Receive = {
 	  case resp: ReceivedTSSDOCanOpenMessage =>
 	   timeout.cancel
-	   //L'ordine non e' verificabile...
-	   //if (-+(resp.message(0)) == buffer.size/*+1*/) {
+	   //order is not checkable
 		 if (buffer.size == totalPacket) {
-		   //println("ULTIMO PACCHETTO!!! manca la verifica del CRC PRIMA "+crc.getValue()+" "+self.path.name)
-		   //crc.update(resp.message,7, 1)
-		   //resp.message.drop(1).foreach(x => crc.update(-+(x)))
-		   //println("ULTIMO PACCHETTO!!! manca la verifica del CRC DOPO  "+crc.getValue()+" "+self.path.name)
-		   //val now = new java.util.Date().getTime
-		   //println("Init at "+initDate+" now is "+now+" used "+(now-initDate))
-		   answareTo ! requestResponceResolver(sendedMsg, buffer.+:(resp))
+		   def aggregate(in: Seq[Array[Byte]], part: Array[Byte]): Array[Byte] =
+		     if (in.isEmpty) part
+		     else aggregate(in.tail, part.++(in.head))
+		   
+		   val orderedFrames =
+			 (buffer.+:(resp)).sortBy(x =>(x.getMessage(0) & 0xFF).toInt)
+		   val orderedBuffer = 
+		     orderedFrames.take(buffer.size)
+		   val orderedBufferNoSeq =
+		     orderedBuffer.map(_.getMessage.drop(1))
+		     
+		   val byteForCrc = 
+		     aggregate(orderedBufferNoSeq,Array())
+		     
+		   val lastMsg =   
+		     orderedFrames.last
+		     	     
+		   val boardCrc =
+		     ((lastMsg.getMessage(1).toInt & 0xFF) + 
+		     (((lastMsg.getMessage(2).toInt & 0xFF) << 8) & 0xFFFF)
+		     & 0xFFFF)
+		     
+		   val myCrc = 
+		     crcCalc(byteForCrc)
+		   
+		    if (myCrc==boardCrc)
+		      answareTo ! requestResponceResolver(sendedMsg, orderedBuffer)
+		    else
+		      answareTo ! requestResponceResolver(sendedMsg)
+		   
+		   context.stop(self)
 		 } else {
-		  println("GOING ON "+buffer.size+" received packet "+ -+(resp.message(0))+" "+self.path.name)
-		  //crc.update(resp.message,7, 1)
-		  //resp.message.drop(1).foreach(x => crc.update(-+(x)))
 		  context.become(
 		      sequentialReceive(
 		          totalPacket, 
@@ -436,13 +459,15 @@ abstract class SDOManager() extends Actor {
 		          buffer.+:(resp)
 		   ), true)
 		 }
-	   /*} else {
-	     println("out of order or strange packet... "+ -+(resp.message(0))+" I was waiting for "+buffer.size)
-	     answareTo ! SDORequestResponse(sendedMsg)
-         context.stop(self)
-	   }*/
 	  case Timeout =>
-	    println("Single message timeout...")
+	    //println("Single message timeout... buffer is "+buffer.size+" total are "+totalPacket)
+	    val allM = 1.to(totalPacket).map(_.toByte)
+	    /*println("I'm missing "+
+	    			allM.filterNot(i => 
+	    			  buffer.exists(m => m.getMessage(0) == i)
+	    			)
+	    		)
+   		*/
 	    answareTo ! requestResponceResolver(sendedMsg)
         context.stop(self)
 	}
@@ -470,20 +495,24 @@ import SDO._
   }
   trait OneDWordExtractor {
     self: SDORequestResponseOK =>
-      def getValue1 =
-      	try {
-      		(((-+(getValue(1)) << 8) + -+(getValue(0))) << 16) +
-      		((-+(getValue(3)) << 8) + -+(getValue(2)))
-      	} catch {
-        case _ : Throwable => 0x00
-      }
-      def getOptValue1 =
-      	try {
-      		Some((((-+(getValue(1)) << 8) + -+(getValue(0))) << 16) +
-      		((-+(getValue(3)) << 8) + -+(getValue(2))))
-      	} catch {
-        case _ : Throwable => None
-      }
+      
+      private val _getValue = (x: Array[Byte]) => {
+        try {
+          Some(
+        	(((-+(x(0))).toLong) 		& 0x000000FF) +
+        	(((-+(x(1))).toLong << 8)	& 0x0000FF00) +
+        	(((-+(x(2))).toLong << 16)	& 0x00FF0000) +
+        	(((-+(x(3))).toLong << 32)	& 0xFF000000)
+          )
+        } catch {
+          case _ : Throwable => None
+        }
+        }
+      
+      def getValue1: Long =
+      	_getValue(getValue).getOrElse(0x00)
+      def getOptValue1: Option[Long] =
+      	_getValue(getValue)
   }
 
   trait TwoWordExtractor {
