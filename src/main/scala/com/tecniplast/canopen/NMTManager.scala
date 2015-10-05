@@ -81,10 +81,10 @@ trait NMTManager {
     val checkTime = 5 seconds
     lazy val initTime = checkTime
     
-    override def preStart(): Unit = {
+    /*override def preStart(): Unit = {
     	import context.dispatcher	
     	context.system.scheduler.schedule(initTime, checkTime)(self ! Check)
-  	}
+  	}*/
 }
 
 /*
@@ -146,7 +146,7 @@ case class PerNodeNMTManager() extends Actor with NMTManager {
         case _ =>
           throw new Exception("Recived uncorrect NMT Msg")
       }
-    case Check =>
+    //case Check =>
     case any => println("NMTPerNode received unmanaged "+any)
   }
 }

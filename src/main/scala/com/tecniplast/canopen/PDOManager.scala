@@ -1,8 +1,6 @@
 package com.tecniplast.canopen
 
 import akka.actor._
-import com.typesafe.config._
-import com.tecniplast.device.CanDevice._
 
 /*
  * Manage RPDO and TPDO

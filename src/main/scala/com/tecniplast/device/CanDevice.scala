@@ -34,6 +34,7 @@ case class CanDevice(port: Int)(dispatcher_prop: Props)
     openCanDevice
   }
 
+
   def openCanDevice: PartialFunction[Any,Unit] = {
     def _openCanDevice: PartialFunction[Any,Unit] = {
     case CanDevice.CanOpened =>
@@ -43,7 +44,8 @@ case class CanDevice(port: Int)(dispatcher_prop: Props)
     case x: GetDispatcher =>
       sender ! RefDispatcher(dispatcher)
     case earlyMsg =>
-      self ! earlyMsg
+      self ! earlyMsg   
+
   }
     
     
@@ -82,8 +84,8 @@ trait CanLibraryActorWrapper {
   me: Actor =>
   def portNumber: Int
 
-  import CanLibrary.BitRate._
-  val bitrate = CAN_BAUD_1M
+  import CanLibrary.BitRate
+  val bitrate =  BitRate.getBitRate
 
   val messageReceivedFunction: msgReceived = new msgReceived {
     def invoke(		port: Int,
@@ -182,10 +184,14 @@ trait CanLibraryActorWrapper {
 case class CanUSBDevice(serial_port: String)(dispatcher_prop: Props) 
 	extends AbstractCanDevice(dispatcher_prop) {
   
+  import CanLibrary.BitRate
+  val br =  BitRate.getBitRateToInt
+  
   def driver =
     (context.child("serial_driver")) match {
       case Some(dr) => dr
-      case _ => context.actorOf(Props(NewSerialDevice(serial_port, 921600)), "serial_driver")
+      case _ =>
+        context.actorOf(Props(NewSerialDevice(serial_port, 921600)), "serial_driver")
     }
   
   def stopDriver = 
@@ -209,7 +215,7 @@ case class CanUSBDevice(serial_port: String)(dispatcher_prop: Props)
       driver ! DataWrite(NOP().toMsg)
       driver ! DataWrite(NOP().toMsg)
       driver ! DataWrite(NOP().toMsg)
-      driver ! DataWrite(SetCanBitRate(8).toMsg)
+      driver ! DataWrite(SetCanBitRate(br).toMsg)
       driver ! DataWrite(OpenChannel().toMsg)
       
       context.become(operative, true)
@@ -399,11 +405,13 @@ object CanJniInterface {
     	jni.writeMsg(num,id,length,flags,tmp_msg)
     }
 
+  /*
   def firmwareDownload(num: Int, address: Int, filePath: String) = 
     synchronized  {
     	jni.fwDownload( num, address,filePath)
     }
-    
+  */
+  
   val device_verbose = 
     try {
     	com.typesafe.config.ConfigFactory.load("canopen.conf").getBoolean("device.receive.verbose")
@@ -429,7 +437,7 @@ case class CanJniDevice(port: Int)(dispatcher_prop: Props)
   }
   def _openCanDevice: PartialFunction[Any,Unit] = {
     case CanDevice.CanOpened =>
-      context.become(operative, true)
+      context.become(operative(), true)
       //context.become(operative_queue(Seq()), true)
     case CanDevice.CanNotOpened =>
       context.become(openCanDevice, true)
@@ -439,15 +447,27 @@ case class CanJniDevice(port: Int)(dispatcher_prop: Props)
       self ! earlyMsg
   }
 
-  def operative: PartialFunction[Any,Unit] = {
+  case object ResetNoWrite
+  
+  import scala.concurrent.ExecutionContext.Implicits.global
+  
+  def operative(noWrite: Boolean = false): Receive = {
     case msg: CanDevice.CanMsgReceived =>
       dispatcher ! msg
+    case ResetNoWrite =>
+      context.become(operative(), true)
     case msg : CanDevice.CanMsgSend =>
-      writeMessage(msg.id,msg.msg,msg.flags)
+      if (!noWrite)
+      if (!writeMessage(msg.id,msg.msg,msg.flags)) {
+        import scala.concurrent._
+        import duration._
+        context.system.scheduler.scheduleOnce(1 second)(self ! ResetNoWrite)
+        context.become(operative(true), true)
+      }
     case msg: CanDevice.FirmwareDownload =>
-      println("Downloading firmware "+msg.filePath+" on board "+msg.address)
-      val res = firmwareDownload(msg.address, msg.filePath)
-      println("Firmware downloaded? "+res)
+      //println("Downloading firmware "+msg.filePath+" on board "+msg.address)
+      //val res = firmwareDownload(msg.address, msg.filePath)
+      //println("Firmware downloaded? "+res)
     case CanDevice.CanClose =>
       context.become(closeCanDevice, true)
     case x: GetDispatcher =>
@@ -518,8 +538,8 @@ trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
   me: CanJniDevice =>
   def portNumber: Int
 
-  import CanLibrary.BitRate._
-  val bitrate = CAN_BAUD_1M
+  import CanLibrary.BitRate
+  val bitrate =  BitRate.getBitRate
   
   def msgReaded(id: Long,
                 dlc: Int,
@@ -595,7 +615,7 @@ trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
         
         println("***********************************************************")
         println("ERRORE!")
-        println("il rilutato è: "+result)
+        println("il risultato e': "+result)
         println("***********************************************************")
         
       }
@@ -609,7 +629,8 @@ trait CanJniLibraryActorWrapper extends CanJniInterfacePojo {
   
   def firmwareDownload(address: Int, filePath: String): Boolean = {
     try {
-      (CanJniInterface.firmwareDownload(portNumber, address, filePath) == 0)
+      //(CanJniInterface.firmwareDownload(portNumber, address, filePath) == 0)
+      true
     } catch {
       case err: Throwable =>
         err.printStackTrace

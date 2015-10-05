@@ -11,7 +11,7 @@ package com.tecniplast.canopen
       index: Long, 
       sub_index: Int, 
       name: String,
-      writable: Boolean = false
+      download: Boolean
   ) {
     
     def getIndex: Array[Byte] = 
@@ -28,37 +28,33 @@ package com.tecniplast.canopen
   }
 trait CanOpenObjectDictionary {
   
-  def getElement
-  		(name: String)
-  		(implicit index: Long, sub_index:Int)
-  		: CanOpenDictionaryElement = 
-    getElement(name,false)
-  def getElement
-  		(name: String,writable: Boolean)
-  		(implicit index: Long, sub_index:Int)
-  		: CanOpenDictionaryElement = 
-    CanOpenDictionaryElement(index,sub_index,name,writable)
+  //def getElement(name: String)(implicit index: Long, sub_index:Int): CanOpenDictionaryElement =
+  //  getElement(name,download)
 
-  def apply(implicit index: Long, sub_index: Int) = { 
+  def getElement(name: String,download: Boolean)(implicit index: Long, sub_index:Int): CanOpenDictionaryElement =
+    CanOpenDictionaryElement(index,sub_index,name,download)
+
+  def apply(implicit index: Long, sub_index: Int, download: Boolean) = {
+    //println(s"CanOpenObjectDictionary Apply! ${index.toString} ${sub_index.toString} ${download.toString}")
     (index,sub_index) match {
       /*address: Int
        * GENERAL
        */
       case (0x1008,0x00) =>
-        getElement("Manufacturer Device Name")
+        getElement("Manufacturer Device Name",download)
       case (0x1009,0x00) =>
-        getElement("Manufacturer Hardware Version")
+        getElement("Manufacturer Hardware Version",download)
       case (0x100A,0x00) =>
-        getElement("Manufacturer Software Version")
+        getElement("Manufacturer Software Version",download)
       /*
        * Identity
        */
       case (0x1018,s_i) =>
         (s_i) match {
-          case 0x01 => getElement("Vendor Id")
-          case 0x02 => getElement("Product Code")
-          case 0x03 => getElement("Revision Number") 
-          case 0x04 => getElement("Serial Number")
+          case 0x01 => getElement("Vendor Id",download)
+          case 0x02 => getElement("Product Code",download)
+          case 0x03 => getElement("Revision Number",download)
+          case 0x04 => getElement("Serial Number",download)
         }
     }
   }

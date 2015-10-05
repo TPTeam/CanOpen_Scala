@@ -165,6 +165,7 @@ object CanOpenMessages {
    */
   object RecivedCanOpenMessage {
     def apply(id: Long, msg: Array[Byte], flags: Int): ReceivedCanOpenMessage = {
+      //println("APPLY!!"+id+" "+getFunction(id)+" "+getAddress(id))
       (getFunction(id),getAddress(id)) match {
         case (NMT_CMD,addr) => //convert into NMT
           	ReceivedNMTCanOpenMessage(addr,msg)

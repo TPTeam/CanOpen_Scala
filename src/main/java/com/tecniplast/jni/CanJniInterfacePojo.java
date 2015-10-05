@@ -13,6 +13,6 @@ public interface CanJniInterfacePojo {
 
 	public boolean writeMessage(long id, byte[] msg, int flags);
 	
-	public boolean firmwareDownload(int address, String filePath);
+	//public boolean firmwareDownload(int address, String filePath);
 
 }

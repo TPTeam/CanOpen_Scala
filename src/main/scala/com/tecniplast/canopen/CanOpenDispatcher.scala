@@ -1,10 +1,10 @@
 package com.tecniplast.canopen
 
 import akka.actor._
+import com.tecniplast.canopen.mailboxes.SDO_PrioMailbox
 import com.typesafe.config._
 import com.tecniplast.device.CanDevice._
 import CanOpenMessages._
-import com.tecniplast.canopen._
 import com.tecniplast.canopen.CanOpenDispatcher._
 /*
  * This actor register ActorRef consumers with type and dipatch messages
@@ -25,7 +25,7 @@ class CanOpenDispatcher(
 		pdo_manager_type: Props,
 		sdo_manager_type: Props,
 		nmt_manager_type: Props
-		) extends Actor {
+		) extends Actor with ActorLogging{
   
   val receive_verbose = 
     try {
@@ -42,7 +42,7 @@ class CanOpenDispatcher(
 
   
   val pdo_manager =
-    context.actorOf(pdo_manager_type,"pdo_manager")
+    context.actorOf(pdo_manager_type.withDispatcher("pdo-prio-dispatcher"),"pdo_manager")
 
   val sdo_manager =
     context.actorOf(sdo_manager_type.withDispatcher("sdo-prio-dispatcher"),"sdo_manager")
@@ -76,6 +76,7 @@ class CanOpenDispatcher(
     			case sync : ReceivedSYNC =>
     			case emergency: ReceivedEMERGENCY =>
     			case timestamp: ReceivedTIMESTAMP =>
+          case any => log.warning("unknown type!!!")
     		}
     	case CanClose => 
     		context.parent ! CanClose

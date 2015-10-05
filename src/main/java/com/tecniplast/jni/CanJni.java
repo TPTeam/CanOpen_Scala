@@ -45,13 +45,13 @@ public class CanJni {
 			int length,
 			int flags,
 			byte[] msg);
-	
+	/*
 	public native int fwDownload(
 			int device,
 			int address,
 			String filePath
 			);
-	
+	*/
 	static{
 	    System.loadLibrary("C-Can-JNI-ScalaBridge");
 	}

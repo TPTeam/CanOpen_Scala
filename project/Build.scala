@@ -14,15 +14,14 @@ object Build extends Build {
         Dependency.Compile.akkaSlf4j,
         Dependency.Compile.logbackClassic,
 		Dependency.Compile.jna,
-		Dependency.Compile.purejavacomm
-      )
+		Dependency.Compile.purejavacomm)
     )
   )
 
   def commonSettings = Defaults.defaultSettings ++ 
     Seq(
       organization := "com.tecniplast",
-      version := "0.0.78_alpha",
+      version := "0.0.95",
       scalaVersion := Version.scala,
       scalacOptions ++= Seq(
         "-unchecked",
@@ -32,6 +31,7 @@ object Build extends Build {
         //"-target:jvm-1.6",
         "-encoding", "UTF-8"
       ),
+      unmanagedBase := baseDirectory.value / "external_libs",
       resolvers ++= 
       Seq(
 		Opts.resolver.sonatypeReleases ,
@@ -41,10 +41,11 @@ object Build extends Build {
     )
 
   object Version {
-    val scala = "2.10.2"
-    val akka = "2.2.4"
+    val scala = "2.11.4"
+    val akka = "2.3.7"
   }
-
+  
+  
   object Dependency {
 
     object Compile {

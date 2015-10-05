@@ -1,7 +1,7 @@
-package com.tecniplast.canopen
+package com.tecniplast.canopen.mailboxes
 
-import akka.dispatch.PriorityGenerator
-import akka.dispatch.UnboundedPriorityMailbox
+import akka.dispatch.{PriorityGenerator, UnboundedPriorityMailbox}
+import com.tecniplast.canopen.CanOpenMessages
 import com.typesafe.config.Config
  
 // We inherit, in this case, from UnboundedPriorityMailbox
